@@ -7,7 +7,7 @@ import sqlite3
 from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from minidash.errors import DomainError
+from minidash.errors import DomainError, NotFoundError
 from minidash.repositories import orders as orders_repo
 from minidash.timeutil import to_db
 
@@ -70,3 +70,23 @@ def release_due_orders(conn: sqlite3.Connection, now: datetime) -> list[int]:
     """Release every scheduled order whose release_at has passed. Returns the ids released."""
     with conn:
         return orders_repo.release_due(conn, to_db(now))
+
+
+def cancel_scheduled_order(conn: sqlite3.Connection, order_id: int) -> None:
+    """Cancel a scheduled order that has not been released yet.
+
+    "Released" means the status change, not the clock: an order whose release_at has passed but
+    which the release job has not reached yet is still SCHEDULED and can still be cancelled.
+    """
+    with conn:
+        cancelled = orders_repo.cancel_if_scheduled(conn, order_id)
+    if cancelled:
+        return
+    row = orders_repo.get_order(conn, order_id)
+    if row is None:
+        raise NotFoundError("ORDER_NOT_FOUND", f"Order {order_id} does not exist")
+    raise DomainError(
+        "ORDER_NOT_CANCELLABLE",
+        f"Order {order_id} is {row['status']}; only SCHEDULED orders can be cancelled",
+        status_code=409,
+    )

@@ -61,3 +61,12 @@ def release_due(conn: sqlite3.Connection, now_db: str) -> list[int]:
         (OrderStatus.PLACED.value, now_db, OrderStatus.SCHEDULED.value, now_db),
     ).fetchall()
     return sorted(row["id"] for row in rows)
+
+
+def cancel_if_scheduled(conn: sqlite3.Connection, order_id: int) -> bool:
+    """Cancel the order only if it is still SCHEDULED. Returns True if it was cancelled."""
+    cur = conn.execute(
+        "UPDATE orders SET status = ? WHERE id = ? AND status = ?",
+        (OrderStatus.CANCELLED.value, order_id, OrderStatus.SCHEDULED.value),
+    )
+    return cur.rowcount == 1

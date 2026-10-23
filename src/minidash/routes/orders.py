@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from minidash.routes.deps import BusinessTz, ClockDep, Conn
 from minidash.schemas import OrderIn, OrderOut, StatusUpdate
-from minidash.services import ordering
+from minidash.services import ordering, scheduling
 
 router = APIRouter(tags=["orders"])
 
@@ -22,3 +22,9 @@ def get_order(order_id: int, conn: Conn):
 @router.patch("/orders/{order_id}/status", response_model=OrderOut)
 def update_status(order_id: int, body: StatusUpdate, conn: Conn):
     return ordering.update_status(conn, order_id, body.status)
+
+
+@router.post("/orders/{order_id}/cancel", response_model=OrderOut)
+def cancel_order(order_id: int, conn: Conn):
+    scheduling.cancel_scheduled_order(conn, order_id)
+    return ordering.get_order(conn, order_id)

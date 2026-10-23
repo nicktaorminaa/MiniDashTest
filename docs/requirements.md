@@ -38,6 +38,7 @@ Error responses use the body `{"error": {"code": "<CODE>", "message": "..."}}`.
 | **AC-9** | US-3 | WHEN the release job runs repeatedly or in parallel, THE SYSTEM SHALL move each scheduled order from `SCHEDULED` to `PLACED` exactly once. |
 | **AC-10** | US-3 | WHEN the service starts after one or more `release_at` times have passed, THE SYSTEM SHALL release those orders on its first run. |
 | **AC-11** | US-4 | WHEN a customer cancels a `SCHEDULED` order, THE SYSTEM SHALL mark it `CANCELLED` and never release it. |
+| **AC-11a** | US-4 | WHILE an order is still `SCHEDULED` after its `release_at` because the release job has not run yet, THE SYSTEM SHALL still allow it to be cancelled. (Released means the status change, not the clock.) |
 | **AC-12** | US-4 | IF a customer cancels an order that is not `SCHEDULED`, THEN THE SYSTEM SHALL return 409 `ORDER_NOT_CANCELLABLE` and change nothing. |
 | **AC-13** | US-3 | IF `PATCH /orders/{id}/status` targets a `SCHEDULED` order, THEN THE SYSTEM SHALL return 409 `ORDER_IS_SCHEDULED` and change nothing. IF it asks for status `SCHEDULED`, THEN THE SYSTEM SHALL return 422 `STATUS_NOT_SETTABLE`. |
 | **AC-14** | US-5 | THE SYSTEM SHALL take now from an injected `Clock` for validation, release, `created_at` and `released_at`. |
@@ -81,7 +82,7 @@ See ADR-002 in `design.md`.
 | AC-7, AC-8 | S6 | `test_release.py::test_release_boundary` |
 | AC-9 | S6 | `test_release.py::test_second_run_releases_nothing`, `test_release.py::test_parallel_release_is_exactly_once` |
 | AC-10 | S6, S7 | `test_release.py::test_catch_up_after_downtime`, `test_worker.py::test_cli_once_releases_overdue_orders` |
-| AC-11, AC-12 | S8 | `test_cancel.py` (all) |
+| AC-11, AC-11a, AC-12 | S8 | `test_cancel.py` (all) |
 | AC-13 | S9 | `test_status_guard.py` (all) |
 | AC-14 | S1, S7 | `test_clock.py`, `test_worker.py::test_background_loop_releases_with_injected_clock` |
 | AC-15 | S2, S5 | `test_schema.py`, `test_api_scheduled.py::test_scheduled_order_is_created_scheduled` |

@@ -78,7 +78,7 @@ validate_schedule(scheduled_for: datetime, now: datetime) -> datetime   # return
 kitchen_open_for_window(opens_at: str, closes_at: str,
                         start: datetime, end: datetime, tz: ZoneInfo) -> bool
 release_due_orders(conn, now: datetime) -> list[int]                    # ids released by this call
-cancel_scheduled_order(conn, order_id: int) -> dict
+cancel_scheduled_order(conn, order_id: int) -> None    # raises 404 / 409
 ```
 
 ## Data changes
