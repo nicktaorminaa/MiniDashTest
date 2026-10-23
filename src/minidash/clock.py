@@ -30,7 +30,9 @@ class ManualClock:
         self._now = _require_aware(when)
 
     def advance(self, delta: timedelta) -> None:
-        self._now = self._now + delta
+        # Add in UTC: adding to a ZoneInfo datetime is wall-clock arithmetic (wrong on DST nights).
+        tz = self._now.tzinfo
+        self._now = (self._now.astimezone(UTC) + delta).astimezone(tz)
 
 
 def _require_aware(value: datetime) -> datetime:

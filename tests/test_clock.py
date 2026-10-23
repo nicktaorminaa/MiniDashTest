@@ -38,3 +38,13 @@ def test_created_at_comes_from_injected_clock(client, clock):
     clock.set(datetime(2027, 1, 2, 3, 4, 5, tzinfo=UTC))
     body = client.post("/orders", json=ORDER).json()
     assert datetime.fromisoformat(body["created_at"]) == datetime(2027, 1, 2, 3, 4, 5, tzinfo=UTC)
+
+
+def test_advance_moves_real_time_across_dst_fall_back():
+    from zoneinfo import ZoneInfo
+
+    ny = ZoneInfo("America/New_York")
+    clock = ManualClock(datetime(2026, 11, 1, 1, 30, tzinfo=ny))  # 01:30 EDT = 05:30 UTC
+    clock.advance(timedelta(hours=1))
+    assert clock.now().astimezone(UTC) == datetime(2026, 11, 1, 6, 30, tzinfo=UTC)
+    assert clock.now().tzinfo is ny  # keeps the caller's zone for display
