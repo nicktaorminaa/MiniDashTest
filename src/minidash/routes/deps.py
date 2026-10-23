@@ -1,0 +1,21 @@
+"""Shared FastAPI dependencies."""
+
+import sqlite3
+from collections.abc import Iterator
+from typing import Annotated
+
+from fastapi import Depends, Request
+
+from minidash.db import connect
+
+
+def get_conn(request: Request) -> Iterator[sqlite3.Connection]:
+    """One SQLite connection per request, closed afterwards."""
+    conn = connect(request.app.state.db_path)
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+
+Conn = Annotated[sqlite3.Connection, Depends(get_conn)]
