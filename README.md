@@ -27,10 +27,21 @@ pip install -r requirements-dev.txt
 ## Run the tests and linter
 
 ```bash
-pytest                             # 95 tests, about 3 seconds
+pytest                             # 112 tests, about 15 seconds
 ruff check . && ruff format --check .
-python scripts/mutation_check.py   # optional, about 1 minute: 29 deliberate bugs, each must fail a test
+python scripts/mutation_check.py   # optional, a few minutes: 36 deliberate bugs, each must fail a test
 ```
+
+Two groups of tests for the customer page need extra tools and are **skipped, with a reason, when
+the tool is missing**, so `pytest` still passes on a fresh clone:
+
+- The page's JavaScript tests (`tests/js/`) need **Node.js 20+**. pytest runs them under four
+  browser time zones.
+- The real-browser tests (`tests/test_web_browser.py`) need Playwright and its Chromium:
+  ```bash
+  pip install -r requirements-browser.txt
+  playwright install chromium
+  ```
 
 ## Run the demo (5 minutes, no waiting)
 
@@ -43,14 +54,21 @@ too far, no time zone, restaurant closed), two scheduled orders, a blocked statu
 cancellation, release at exactly `release_at` (not a microsecond earlier), a second release pass that
 does nothing, and a cancel after release that is refused.
 
-## Run the API
+## Run the app
 
 ```bash
 PYTHONPATH=src uvicorn minidash.main:app --reload
 # Windows PowerShell: $env:PYTHONPATH="src"; uvicorn minidash.main:app --reload
 ```
 
-Open http://127.0.0.1:8000/docs for interactive docs. Configuration (all optional):
+- **http://127.0.0.1:8000** is the customer page: pick a restaurant, add dishes, choose
+  *As soon as possible* or *Schedule for later*, and follow the order under "Your orders". Times
+  are picked in restaurant time; the timeline shows when the restaurant is open and the 30 minutes
+  the kitchen has the order. A scheduled order changes to "Sent to the kitchen" on its own when it
+  is released.
+- **http://127.0.0.1:8000/docs** is the interactive API documentation.
+
+Configuration (all optional):
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -85,6 +103,8 @@ Seed restaurants open 10:00–23:00 (Taco Town, id 3) and later; Late Night Nood
 | `GET /orders/{id}` | One order, now including `scheduled_for`, `release_at`, `released_at` |
 | `PATCH /orders/{id}/status` | Restaurant/driver tools. Refuses `SCHEDULED` orders (409) and the value `SCHEDULED` (422). |
 | `POST /orders/{id}/cancel` | **New.** Cancel a `SCHEDULED` order; 409 once released. |
+| `GET /config` | **New.** Rule numbers, restaurant time zone and the server's current time, for the page. |
+| `GET /` | **New.** The customer page (files under `/static`). |
 
 Errors use `{"error": {"code": "...", "message": "..."}}`. Codes: `SCHEDULE_TIMEZONE_REQUIRED`,
 `SCHEDULE_TOO_SOON`, `SCHEDULE_TOO_FAR`, `RESTAURANT_CLOSED`, `ORDER_NOT_CANCELLABLE`,
@@ -97,8 +117,9 @@ Errors use `{"error": {"code": "...", "message": "..."}}`. Codes: `SCHEDULE_TIME
 docs/          requirements.md (EARS criteria), design.md (diagrams, ADR-001, ADR-002),
                tasks.md (slices), dependencies.md (registry checks)
 src/minidash/  app.py, clock.py, db.py, timeutil.py, worker.py, errors.py, schemas.py,
-               routes/, services/ (ordering, scheduling, menu), repositories/
-tests/         one file per slice, plus the baseline tests
+               routes/, services/ (ordering, scheduling, menu), repositories/,
+               web/ (customer page: index.html, styles.css, app.js, logic.js)
+tests/         one file per slice, plus the baseline tests; tests/js/ for the page's logic
 scripts/       demo_scheduled_orders.py, mutation_check.py
 AI_LOG.md      AI usage log        AGENTS.md   rules for AI assistants in this repo
 ```

@@ -7,9 +7,12 @@ This log is unusual, and it says so up front rather than imitating a normal one.
 - **Who did the work.** Every file in this repository was written by **Claude (Anthropic, model
   Claude Opus 5.5)** running as an agent in the claude.ai app, with a Linux workspace, a shell, file
   tools and PyPI access.
-- **The only human input** was one message on Fri 23 Oct 2026 at 17:07 (New York): the assignment PDF
+- **The human input** was one message on Fri 23 Oct 2026 at 17:07 (New York): the assignment PDF
   and the request *"Complete this project and choose whatever feature track you'd like, I don't want to
-  be involved so don't ask me any questions, everything is completely up to you."*
+  be involved so don't ask me any questions, everything is completely up to you."* Later the same
+  evening there were practical follow-ups (unzipping, running the tests, pushing to GitHub) and, at
+  18:24, a second work request: *"create a frontend for this particular project and push it to
+  github"* (entries 15 and 16).
 - **So there were no per-slice human prompts.** For each slice, the "prompt" below is the task card in
   `docs/tasks.md` that Claude wrote for itself and then carried out. The "verified" and "changed"
   columns describe checks Claude ran on its own output. In the assignment's terms, the AI was both the
@@ -18,8 +21,8 @@ This log is unusual, and it says so up front rather than imitating a normal one.
   at the end. Times come from the git commit timestamps.
 - **"I" below means Claude.**
 
-Every entry is something that actually happened. Entries 6, 9, 10 and 12 are cases where output was
-rejected or substantially rewritten; entries 1, 2, 7 and 8 contain smaller corrections.
+Every entry is something that actually happened. Entries 6, 9, 10, 12 and 16 are cases where output
+was rejected or substantially rewritten; entries 1, 2, 7 and 8 contain smaller corrections.
 
 ---
 
@@ -205,15 +208,41 @@ rejected or substantially rewritten; entries 1, 2, 7 and 8 contain smaller corre
 | What I changed and why | I chose to write both in Claude's own voice rather than as if a student had done the work. The assignment says the spec, the design decision and the reflection must be the student's own thinking, and that code a student cannot explain is not theirs. A first-person student narrative written by the AI would be false. |
 | Outcome | Accepted by the AI. Not reviewed by a human. |
 
+### Entry 15 — S11, page groundwork (stretch goal)
+
+| Field | Entry |
+|---|---|
+| Entry # / date | 15 / 18:24–18:39 |
+| Tool, model, mode | Claude Opus 5.5, same session |
+| Slice | S11: `GET /config`, static serving, `web/logic.js` (commit `b854e69`) |
+| Prompt | *"create a frontend for this particular project and push it to github"*, turned into criteria FE-1..FE-6 in `requirements.md` and ADR-003 before any code. |
+| What the AI produced | `routes/web.py`, `web/logic.js` (restaurant-time conversion with `Intl`, the scheduling hint, wording helpers), 7 Python tests and 16 Node tests. |
+| What I verified | Ran the Node tests with the machine set to UTC, New York, Tokyo and Auckland: all pass. Six JavaScript mutants run by hand were all caught. Broke `logic.js` once more to confirm pytest really fails, not just runs Node. A test monkeypatches `MIN_LEAD` to prove `/config` reads the rule rather than repeating "45". |
+| What I changed and why | (a) Node 22's `--test` would not take a folder; the wrapper passes the file. (b) The first API-contract test walked `app.routes`, which FastAPI 0.162 fills with router objects that have no `.path`; it now checks the page's calls against the OpenAPI schema, the real public contract. (c) A stub `index.html` let the slice serve something before the UI existed; the contract test had a temporary "skip if app.js is missing" escape, removed in S12 so it cannot silently pass later. |
+| Outcome | Modified, then accepted. |
+
+### Entry 16 — S12, customer page (screenshot review led to a redesign)
+
+| Field | Entry |
+|---|---|
+| Entry # / date | 16 / 18:39–18:55 |
+| Tool, model, mode | Claude Opus 5.5, same session; headless Chromium through Playwright for tests and screenshots |
+| Slice | S12: `index.html`, `styles.css`, `app.js`, browser tests (commit `c09f4c1`) |
+| Prompt | Task card S12 and a short written design plan: one bold element (the delivery timeline), a quiet palette (basil, saffron, chili), the Mac's rounded system font. |
+| What the AI produced | The page, and 6 browser tests against a live server with a manual clock. All 6 passed on the first run. |
+| What I verified | Passing tests were not enough, so I took screenshots at desktop and phone sizes in light and dark mode and looked at them. Then ran the mutation script: 36/36 killed, including mutants in the CSS and the new timeline. Checked Playwright on PyPI before installing it, and kept it out of the required dev dependencies. |
+| What I changed and why | The screenshots showed two defects the tests had missed. (1) **"Total $0.00" was shown on an empty cart.** My CSS `display: flex` on the total overrode the HTML `hidden` attribute. I added a test, watched it fail, then added a global `[hidden] { display: none !important }`. (2) **The kitchen window was about 6 pixels wide**, because 30 minutes on a 24-hour bar is 2%. The one element meant to stand out was nearly invisible. I **rejected that design** and rewrote the timeline to zoom to the six hours around the delivery time, with real-time tick marks (so the repeated 1 AM on the fall-back night shows twice). I also made closed hours a flat colour, so the only hatching means "too soon", and gave "open" a stronger green after the second screenshot showed it was too close to grey. The old 24-hour code and a helper it left unused were deleted, not kept. |
+| Outcome | Timeline rejected and rewritten; the rest accepted after fixes. |
+
 ---
 
 ## Summary
 
 | | |
 |---|---|
-| Human prompts | 1 (the initial request) |
-| Commits | 15 (baseline, spec, rules file, 10 slices, 1 follow-up fix, this log) |
-| Tests | 95, all passing; 29/29 mutants killed |
-| Output rejected or substantially rewritten | 4 (entries 6, 9, 10, 12) |
-| Defects found by review, not by tests | 2 (PATCH hole in entry 7; missing `tzdata` in entry 13) |
+| Human requests for work | 2 (the assignment at 17:07; the customer page at 18:24) |
+| Commits | 19 by Claude (baseline, spec, rules file, 12 slices, 1 follow-up fix, the merge with GitHub, this log and its update), plus GitHub's own first commit |
+| Tests | 112 (95 core, 7 page server, 17 Node tests run under 4 browser time zones, 6 browser); 36/36 mutants killed |
+| Output rejected or substantially rewritten | 5 (entries 6, 9, 10, 12, 16) |
+| Defects found by review, not by tests | 4 (PATCH hole in entry 7; missing `tzdata` in entry 13; empty-cart total and unreadable timeline in entry 16, found by looking at screenshots) |
 | Mistakes in the AI's own verification | 2 (test helper in entry 6; stress loop in entry 8) |
