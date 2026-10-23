@@ -8,7 +8,7 @@
 | Infrastructure | `src/minidash/db.py` | Idempotent `migrate()` that adds three nullable columns and an index to `orders`, for new and baseline databases alike. |
 | Infrastructure | `src/minidash/timeutil.py` (new) | Fixed-width UTC timestamp format so SQL string comparison equals time comparison. |
 | Domain | `src/minidash/services/scheduling.py` (new) | Pure rules (`validate_schedule`, `kitchen_open_for_window`) and use cases (`release_due_orders`, `cancel_scheduled_order`). |
-| Service | `src/minidash/services/ordering.py` | `place_order` takes a clock and the business time zone and calls the scheduling rules; `update_status` refuses to touch `SCHEDULED` orders. |
+| Service | `src/minidash/services/ordering.py` | `place_order` takes `now` (read from the clock by the route) and the business time zone and calls the scheduling rules; `update_status` refuses to touch `SCHEDULED` orders. |
 | Repository | `src/minidash/repositories/orders.py` | Schedule fields on insert; state-guarded `release_due`, `cancel_if_scheduled`, `update_status_unless_scheduled`. |
 | Routes | `src/minidash/routes/orders.py` | Optional `scheduled_for` on `POST /orders`; new `POST /orders/{id}/cancel`. |
 | Worker | `src/minidash/worker.py` (new) | Background release loop started by the app's lifespan, and a `--once` CLI. |

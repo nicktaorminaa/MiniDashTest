@@ -3,6 +3,7 @@
 import sqlite3
 from collections.abc import Iterator
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from fastapi import Depends, Request
 
@@ -27,3 +28,10 @@ def get_clock(request: Request) -> Clock:
 
 
 ClockDep = Annotated[Clock, Depends(get_clock)]
+
+
+def get_business_tz(request: Request) -> ZoneInfo:
+    return request.app.state.business_tz
+
+
+BusinessTz = Annotated[ZoneInfo, Depends(get_business_tz)]

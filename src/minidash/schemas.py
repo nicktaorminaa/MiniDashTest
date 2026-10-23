@@ -1,11 +1,13 @@
 """Request and response models."""
 
+from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
 class OrderStatus(StrEnum):
+    SCHEDULED = "SCHEDULED"
     PLACED = "PLACED"
     PREPARING = "PREPARING"
     READY = "READY"
@@ -38,6 +40,7 @@ class OrderIn(BaseModel):
     restaurant_id: int
     items: list[OrderItemIn] = Field(min_length=1)
     address: str = Field(min_length=1, max_length=300)
+    scheduled_for: datetime | None = None
 
 
 class OrderItemOut(BaseModel):

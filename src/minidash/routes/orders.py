@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from minidash.routes.deps import ClockDep, Conn
+from minidash.routes.deps import BusinessTz, ClockDep, Conn
 from minidash.schemas import OrderIn, OrderOut, StatusUpdate
 from minidash.services import ordering
 
@@ -10,8 +10,8 @@ router = APIRouter(tags=["orders"])
 
 
 @router.post("/orders", response_model=OrderOut, status_code=201)
-def place_order(order: OrderIn, conn: Conn, clock: ClockDep):
-    return ordering.place_order(conn, order, clock.now())
+def place_order(order: OrderIn, conn: Conn, clock: ClockDep, tz: BusinessTz):
+    return ordering.place_order(conn, order, clock.now(), tz)
 
 
 @router.get("/orders/{order_id}", response_model=OrderOut)

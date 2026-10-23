@@ -23,5 +23,5 @@ def clock():
 
 @pytest.fixture
 def client(db_path, clock):
-    with TestClient(create_app(db_path, clock=clock)) as c:
+    with TestClient(create_app(db_path, clock=clock, business_tz="America/New_York")) as c:
         yield c
