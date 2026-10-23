@@ -55,6 +55,9 @@ class OrderOut(BaseModel):
     total_cents: int
     address: str
     created_at: str
+    scheduled_for: str | None = None
+    release_at: str | None = None
+    released_at: str | None = None
     items: list[OrderItemOut]
 
 

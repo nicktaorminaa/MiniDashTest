@@ -72,12 +72,29 @@ def connect(db_path: str) -> sqlite3.Connection:
     return conn
 
 
+# Columns added after the baseline. New and existing databases both get them through
+# migrate(), so there is one code path for both.
+SCHEDULE_COLUMNS = ("scheduled_for", "release_at", "released_at")
+
+
+def migrate(conn: sqlite3.Connection) -> None:
+    """Add the scheduled-order columns and index if they are missing. Safe to run repeatedly."""
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(orders)")}
+    for column in SCHEDULE_COLUMNS:
+        if column not in existing:
+            conn.execute(f"ALTER TABLE orders ADD COLUMN {column} TEXT")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_orders_status_release ON orders(status, release_at)"
+    )
+
+
 def init_db(db_path: str, seed: bool = True) -> None:
-    """Create tables and, if the database is empty, insert seed data."""
+    """Create tables, apply migrations and, if the database is empty, insert seed data."""
     conn = connect(db_path)
     try:
         with conn:
             conn.executescript(SCHEMA)
+            migrate(conn)
             if seed and conn.execute("SELECT COUNT(*) FROM restaurants").fetchone()[0] == 0:
                 conn.executemany("INSERT INTO restaurants VALUES (?, ?, ?, ?, ?, ?)", RESTAURANTS)
                 conn.executemany("INSERT INTO menu_items VALUES (?, ?, ?, ?)", MENU_ITEMS)

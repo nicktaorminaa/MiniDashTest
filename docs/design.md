@@ -5,7 +5,7 @@
 | Layer | File | Change |
 |---|---|---|
 | Infrastructure | `src/minidash/clock.py` (new) | `Clock` protocol, `SystemClock`, `ManualClock`. |
-| Infrastructure | `src/minidash/db.py` | Three nullable columns on `orders`, an index, and an idempotent migration for databases created by the baseline. |
+| Infrastructure | `src/minidash/db.py` | Idempotent `migrate()` that adds three nullable columns and an index to `orders`, for new and baseline databases alike. |
 | Infrastructure | `src/minidash/timeutil.py` (new) | Fixed-width UTC timestamp format so SQL string comparison equals time comparison. |
 | Domain | `src/minidash/services/scheduling.py` (new) | Pure rules (`validate_schedule`, `kitchen_open_for_window`) and use cases (`release_due_orders`, `cancel_scheduled_order`). |
 | Service | `src/minidash/services/ordering.py` | `place_order` takes a clock and the business time zone and calls the scheduling rules; `update_status` refuses to touch `SCHEDULED` orders. |
@@ -90,8 +90,9 @@ ALTER TABLE orders ADD COLUMN released_at  TEXT;    -- set once, by the release 
 CREATE INDEX IF NOT EXISTS idx_orders_status_release ON orders(status, release_at);
 ```
 
-New databases get the columns from `CREATE TABLE`; existing baseline databases get them from a
-migration that checks `PRAGMA table_info(orders)` first, so it is safe to run on every start.
+Both new and existing baseline databases get the columns from one migration, `db.migrate()`, which
+checks `PRAGMA table_info(orders)` first, so it is safe to run on every start and there is a single
+code path for both.
 
 All stored times use one format, `2026-10-24T23:00:00.000000+00:00`. Because every value is UTC and
 the same width, `release_at <= :now` compares correctly as text.

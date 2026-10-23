@@ -12,12 +12,14 @@ def insert_order(
     address: str,
     created_at: str,
     items: list[tuple[int, int, int]],
+    scheduled_for: str | None = None,
+    release_at: str | None = None,
 ) -> int:
     """Insert an order and its items. `items` is (menu_item_id, quantity, unit_price_cents)."""
     cur = conn.execute(
-        "INSERT INTO orders (restaurant_id, status, total_cents, address, created_at) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (restaurant_id, status, total_cents, address, created_at),
+        "INSERT INTO orders (restaurant_id, status, total_cents, address, created_at, "
+        "scheduled_for, release_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (restaurant_id, status, total_cents, address, created_at, scheduled_for, release_at),
     )
     order_id = cur.lastrowid
     conn.executemany(

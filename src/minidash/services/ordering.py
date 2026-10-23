@@ -7,6 +7,7 @@ from minidash.errors import DomainError, NotFoundError
 from minidash.repositories import orders as orders_repo
 from minidash.repositories import restaurants as restaurants_repo
 from minidash.schemas import OrderIn, OrderStatus
+from minidash.timeutil import to_db
 
 
 def place_order(conn: sqlite3.Connection, order: OrderIn, now: datetime) -> dict:
@@ -34,7 +35,7 @@ def place_order(conn: sqlite3.Connection, order: OrderIn, now: datetime) -> dict
             status=OrderStatus.PLACED.value,
             total_cents=total,
             address=order.address,
-            created_at=now.isoformat(),
+            created_at=to_db(now),
             items=lines,
         )
     return get_order(conn, order_id)
