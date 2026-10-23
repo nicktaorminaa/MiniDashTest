@@ -45,8 +45,13 @@ def get_order_items(conn: sqlite3.Connection, order_id: int) -> list[sqlite3.Row
     ).fetchall()
 
 
-def update_status(conn: sqlite3.Connection, order_id: int, status: str) -> None:
-    conn.execute("UPDATE orders SET status = ? WHERE id = ?", (status, order_id))
+def update_status_unless_scheduled(conn: sqlite3.Connection, order_id: int, status: str) -> bool:
+    """Set the status unless the order is SCHEDULED. Returns True if a row changed."""
+    cur = conn.execute(
+        "UPDATE orders SET status = ? WHERE id = ? AND status != ?",
+        (status, order_id, OrderStatus.SCHEDULED.value),
+    )
+    return cur.rowcount == 1
 
 
 def release_due(conn: sqlite3.Connection, now_db: str) -> list[int]:

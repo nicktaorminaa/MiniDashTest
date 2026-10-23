@@ -91,8 +91,21 @@ def get_order(conn: sqlite3.Connection, order_id: int) -> dict:
 
 
 def update_status(conn: sqlite3.Connection, order_id: int, status: OrderStatus) -> dict:
-    if orders_repo.get_order(conn, order_id) is None:
-        raise NotFoundError("ORDER_NOT_FOUND", f"Order {order_id} does not exist")
+    """Restaurant and driver tools move orders along. They cannot touch a SCHEDULED order
+    (that would skip the hold) or set SCHEDULED (that would strand an order with no
+    release_at)."""
+    if status == OrderStatus.SCHEDULED:
+        raise DomainError(
+            "STATUS_NOT_SETTABLE", "SCHEDULED is only set by placing an order with scheduled_for"
+        )
     with conn:
-        orders_repo.update_status(conn, order_id, status.value)
+        changed = orders_repo.update_status_unless_scheduled(conn, order_id, status.value)
+    if not changed:
+        if orders_repo.get_order(conn, order_id) is None:
+            raise NotFoundError("ORDER_NOT_FOUND", f"Order {order_id} does not exist")
+        raise DomainError(
+            "ORDER_IS_SCHEDULED",
+            f"Order {order_id} is scheduled; cancel it or wait until it is released",
+            status_code=409,
+        )
     return get_order(conn, order_id)
