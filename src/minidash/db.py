@@ -88,8 +88,19 @@ def migrate(conn: sqlite3.Connection) -> None:
     )
 
 
+# UPDATE ... RETURNING (used to release scheduled orders atomically) needs SQLite 3.35+.
+MIN_SQLITE = (3, 35, 0)
+
+
+def check_sqlite_version(version: tuple[int, int, int] = sqlite3.sqlite_version_info) -> None:
+    if version < MIN_SQLITE:
+        found = ".".join(map(str, version))
+        raise RuntimeError(f"MiniDash needs SQLite 3.35 or newer; this Python has {found}")
+
+
 def init_db(db_path: str, seed: bool = True) -> None:
     """Create tables, apply migrations and, if the database is empty, insert seed data."""
+    check_sqlite_version()
     conn = connect(db_path)
     try:
         with conn:

@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
-from minidash.db import SCHEDULE_COLUMNS, connect, init_db
+from minidash.db import SCHEDULE_COLUMNS, check_sqlite_version, connect, init_db
 from minidash.timeutil import to_db
 
 BASELINE_ORDERS_DDL = """
@@ -79,3 +79,9 @@ def test_order_response_has_null_schedule_fields(client):
     fetched = client.get(f"/orders/{body['id']}").json()
     for field in ("scheduled_for", "release_at", "released_at"):
         assert field in fetched and fetched[field] is None
+
+
+def test_old_sqlite_is_rejected_with_a_clear_message():
+    with pytest.raises(RuntimeError, match="3.35"):
+        check_sqlite_version((3, 31, 1))
+    check_sqlite_version((3, 35, 0))

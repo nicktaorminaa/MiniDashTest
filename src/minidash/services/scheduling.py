@@ -3,10 +3,13 @@
 The three numbers in Track A (45 minutes, 7 days, 30 minutes) live only in this module.
 """
 
+import sqlite3
 from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from minidash.errors import DomainError
+from minidash.repositories import orders as orders_repo
+from minidash.timeutil import to_db
 
 MIN_LEAD = timedelta(minutes=45)
 MAX_HORIZON = timedelta(days=7)
@@ -61,3 +64,9 @@ def kitchen_open_for_window(
 def _parse_hhmm(value: str) -> time:
     hours, minutes = value.split(":")
     return time(int(hours), int(minutes))
+
+
+def release_due_orders(conn: sqlite3.Connection, now: datetime) -> list[int]:
+    """Release every scheduled order whose release_at has passed. Returns the ids released."""
+    with conn:
+        return orders_repo.release_due(conn, to_db(now))

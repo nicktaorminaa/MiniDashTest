@@ -2,6 +2,8 @@
 
 import sqlite3
 
+from minidash.schemas import OrderStatus
+
 
 def insert_order(
     conn: sqlite3.Connection,
@@ -45,3 +47,17 @@ def get_order_items(conn: sqlite3.Connection, order_id: int) -> list[sqlite3.Row
 
 def update_status(conn: sqlite3.Connection, order_id: int, status: str) -> None:
     conn.execute("UPDATE orders SET status = ? WHERE id = ?", (status, order_id))
+
+
+def release_due(conn: sqlite3.Connection, now_db: str) -> list[int]:
+    """Move every SCHEDULED order with release_at <= now to PLACED. Returns the ids changed.
+
+    The status check is in the WHERE clause, so an order already released or cancelled is never
+    touched again, however many times or from however many connections this runs.
+    """
+    rows = conn.execute(
+        "UPDATE orders SET status = ?, released_at = ? "
+        "WHERE status = ? AND release_at <= ? RETURNING id",
+        (OrderStatus.PLACED.value, now_db, OrderStatus.SCHEDULED.value, now_db),
+    ).fetchall()
+    return sorted(row["id"] for row in rows)
