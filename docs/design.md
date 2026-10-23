@@ -13,6 +13,8 @@
 | Routes | `src/minidash/routes/orders.py` | Optional `scheduled_for` on `POST /orders`; new `POST /orders/{id}/cancel`. |
 | Worker | `src/minidash/worker.py` (new) | Background release loop started by the app's lifespan, and a `--once` CLI. |
 | App | `src/minidash/app.py` | Accepts `clock`, `business_tz` and `release_interval`; stores them on `app.state`. |
+| Routes (stretch) | `src/minidash/routes/web.py` (new) | Serves the page at `/` and its files at `/static`; `GET /config` gives the page the rules, the restaurant time zone and the server's clock. |
+| Page (stretch) | `src/minidash/web/` (new) | `index.html`, `styles.css`, `app.js` (DOM and API calls), `logic.js` (pure time and rule helpers, tested in Node). |
 
 The layering rule from the baseline is kept: routes parse HTTP and call services; services own rules and
 transactions; repositories own SQL. Only the domain module knows about the 45-minute, 7-day and
@@ -182,3 +184,46 @@ compares two datetimes with the same `tzinfo` by wall time and gets daylight-sav
 
 **Consequences.** The earliest possible delivery is 30 minutes after opening. On Windows, `zoneinfo`
 needs the `tzdata` package, so it is listed in `requirements.txt` with a Windows-only marker.
+
+---
+
+## Customer page (stretch goal)
+
+The page is static files served by the same FastAPI app, so it needs no build step, no extra server
+and no new dependency. It talks only to the public API plus one new read-only endpoint:
+
+```
+GET /config -> {"now": "<server clock, UTC>", "business_timezone": "America/New_York",
+                "min_lead_minutes": 45, "max_horizon_days": 7, "release_before_minutes": 30}
+```
+
+- **No duplicated numbers.** The page reads the three rule values from `/config`, which takes them
+  from `services/scheduling.py`. A test changes `MIN_LEAD` and checks `/config` follows.
+- **Server time, not browser time.** The page keeps the difference between `now` and the browser's
+  clock, so hints agree with the server even under a `ManualClock` (demo, tests) or a wrong laptop
+  clock.
+- **Restaurant time zone.** Customers pick a date and time in `business_timezone`. `logic.js` converts
+  that wall time to an instant with `Intl` (no date library), using the same fold=0 rule as Python
+  for the repeated and skipped hours, and sends it as UTC (`...Z`).
+- **The server still decides.** `scheduleHint` mirrors the server's rules only to warn early; every
+  order goes to `POST /orders`, and API error codes are turned into plain sentences.
+- **Tracking.** The page remembers the order numbers it placed (browser storage, wrapped in
+  `try/catch`; in memory if storage is blocked) and polls `GET /orders/{id}` every 3 seconds until
+  each order reaches a final status.
+
+## ADR-003: How to build the customer page
+
+**Status:** Accepted
+
+**Options considered.** (1) A React or Vue app with a bundler: rich tooling, but a Node build step and
+a dependency tree to audit for a page with three panels. (2) Server-rendered templates (Jinja2): good
+for forms, but a new Python dependency and a full reload for each status change. (3) Plain HTML, CSS
+and JavaScript modules served by FastAPI's `StaticFiles`.
+
+**Decision.** Option 3. It adds no package, runs from `uvicorn` alone, and keeps the logic worth
+testing in one pure module (`logic.js`) that Node's built-in test runner can test without a browser.
+A Playwright browser test covers the wiring when Playwright is installed.
+
+**Consequences.** No component framework, so `app.js` builds the DOM by hand and must avoid
+`innerHTML` with server data (it uses `textContent`). Node is needed to run the JavaScript unit tests;
+pytest skips them, with a reason, where Node is missing.

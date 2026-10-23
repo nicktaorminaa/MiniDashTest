@@ -199,6 +199,41 @@ MUTANTS = [
         [("        if column not in existing:", "        if False:")],
     ),
     (
+        "page: repeated time picks the later one",
+        "web/logic.js",
+        [
+            (
+                "return valid.length ? Math.min(...valid) : before;",
+                "return valid.length ? Math.max(...valid) : before;",
+            )
+        ],
+    ),
+    (
+        "page: lead-time hint < becomes <=",
+        "web/logic.js",
+        [
+            (
+                "if (lead < rules.min_lead_minutes * MINUTE)",
+                "if (lead <= rules.min_lead_minutes * MINUTE)",
+            )
+        ],
+    ),
+    (
+        "page: hours ignore yesterday's interval",
+        "web/logic.js",
+        [("for (const day of [addDays(startDay, -1), startDay])", "for (const day of [startDay])")],
+    ),
+    (
+        "page: timeline assumes 24-hour days",
+        "web/logic.js",
+        [("const span = dayEnd - dayStart;", "const span = 24 * HOUR;")],
+    ),
+    (
+        "config: lead time hard-coded",
+        "routes/web.py",
+        [('"min_lead_minutes": int(MIN_LEAD.total_seconds() // 60),', '"min_lead_minutes": 45,')],
+    ),
+    (
         "clock: advance in wall-clock time",
         "clock.py",
         [("(self._now.astimezone(UTC) + delta).astimezone(tz)", "self._now + delta")],

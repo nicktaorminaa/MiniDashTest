@@ -86,3 +86,33 @@ See ADR-002 in `design.md`.
 | AC-13 | S9 | `test_status_guard.py` (all) |
 | AC-14 | S1, S7 | `test_clock.py`, `test_worker.py::test_background_loop_releases_with_injected_clock` |
 | AC-15 | S2, S5 | `test_schema.py`, `test_api_scheduled.py::test_scheduled_order_is_created_scheduled` |
+
+## Stretch goal: customer web page
+
+Added after the core feature, at the request of the person who commissioned this work. The
+assignment allows a front-end page as a stretch goal if it is verified and documented like the
+core feature.
+
+**US-6** As a customer, I want a page where I can order now or schedule for later, see why a time is
+not allowed, and follow or cancel my scheduled order, so that I don't need an API client.
+
+| ID | Criterion |
+|---|---|
+| **FE-1** | WHEN a customer opens `/`, THE SYSTEM SHALL serve a page that lists the restaurants with their hours and lets the customer build an order from a menu. |
+| **FE-2** | WHEN the page needs the scheduling rules or the current time, THE SYSTEM SHALL provide them from `GET /config`, using the scheduling module's values and the injected clock. The page hard-codes none of them. |
+| **FE-3** | WHEN a customer picks a delivery date and time, THE PAGE SHALL read it as restaurant time (`business_timezone`) whatever the browser's own time zone, and show the opening hours, the too-soon zone and the kitchen window on a timeline of that day. |
+| **FE-4** | IF the chosen time breaks a rule, THEN THE PAGE SHALL warn before the order is sent, using the API's error codes. IF the API rejects an order, THEN THE PAGE SHALL show a plain-language message for that code. |
+| **FE-5** | WHEN an order is placed, THE PAGE SHALL list it under "Your orders", refresh its status without a reload, and offer Cancel only while it is `SCHEDULED`. |
+| **FE-6** | WHERE the browser blocks local storage, THE PAGE SHALL still work for the current visit. |
+
+Out of scope for the page: sign-in, payment, editing an order, and showing orders placed from other
+browsers (there is no "list my orders" endpoint, so the page remembers the order numbers it placed).
+
+| Criterion | Slice | Tests |
+|---|---|---|
+| FE-1 | S11, S12 | `test_web.py::test_index_is_served_at_root`, `test_web_browser.py::test_schedule_then_cancel_in_a_real_browser` |
+| FE-2 | S11 | `test_web.py::test_config_reports_rules_zone_and_injected_clock`, `test_web.py::test_config_numbers_come_from_the_scheduling_module` |
+| FE-3 | S11, S12 | `tests/js/logic.test.mjs` (run under 4 time zones by `test_web_logic_js.py`), `test_web_browser.py` |
+| FE-4 | S11, S12 | `tests/js/logic.test.mjs`, `test_web_browser.py::test_server_rejection_is_explained` |
+| FE-5 | S12 | `test_web_browser.py::test_schedule_then_cancel_in_a_real_browser`, `test_web_browser.py::test_status_updates_when_the_order_is_released` |
+| FE-6 | S12 | `test_web_browser.py::test_page_works_when_storage_is_blocked` |

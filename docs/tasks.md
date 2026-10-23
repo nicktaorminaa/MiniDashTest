@@ -15,6 +15,8 @@ pass, the full suite still passes, and the whole diff has been read for anything
 | S8 | **Cancel before release.** `POST /orders/{id}/cancel` with a guarded `UPDATE`. | AC-11, AC-12 | `tests/test_cancel.py`: cancel then release → never placed; release then cancel → 409, unchanged; cancel twice → 409; immediate order → 409; unknown id → 404. | Done |
 | S9 | **Guard the status endpoint.** PATCH cannot change a `SCHEDULED` order or set `SCHEDULED`. | AC-13 | `tests/test_status_guard.py`: PATCH on scheduled → 409 and still scheduled (release still happens later); PATCH to `SCHEDULED` → 422; released orders can be PATCHed normally. | Done |
 | S10 | **Demo and docs.** In-process demo script with a manual clock, README run/test/demo instructions, dependency audit. | — | `scripts/demo_scheduled_orders.py` runs to completion; README commands run from a fresh clone. | Done |
+| S11 | **Page groundwork (stretch).** `GET /config` (rules, zone, server time), serve `web/` at `/` and `/static`, pure page logic in `web/logic.js`. | FE-2, FE-3, FE-4 | `tests/test_web.py`; `tests/js/logic.test.mjs` run by `tests/test_web_logic_js.py` under UTC, New York, Tokyo and Auckland browser zones. | Done |
+| S12 | **Customer page (stretch).** Restaurants, menu, order panel with day timeline, "Your orders" tracker with polling and Cancel. | FE-1, FE-3–FE-6 | `tests/test_web_browser.py` drives headless Chromium against a live server with a manual clock (skipped without Playwright). | Planned |
 
 ## Mutation checks
 

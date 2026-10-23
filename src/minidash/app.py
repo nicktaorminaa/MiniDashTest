@@ -7,11 +7,12 @@ from contextlib import asynccontextmanager, suppress
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from minidash.clock import Clock, SystemClock
 from minidash.db import init_db
 from minidash.errors import DomainError, domain_error_handler
-from minidash.routes import orders, restaurants
+from minidash.routes import orders, restaurants, web
 from minidash.worker import release_loop
 
 
@@ -52,4 +53,6 @@ def create_app(
     app.add_exception_handler(DomainError, domain_error_handler)
     app.include_router(restaurants.router)
     app.include_router(orders.router)
+    app.include_router(web.router)
+    app.mount("/static", StaticFiles(directory=web.WEB_DIR), name="static")
     return app
