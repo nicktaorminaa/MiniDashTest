@@ -23,5 +23,8 @@ def clock():
 
 @pytest.fixture
 def client(db_path, clock):
-    with TestClient(create_app(db_path, clock=clock, business_tz="America/New_York")) as c:
+    # The background release loop is off here; release tests call the service directly and
+    # tests/test_worker.py covers the loop.
+    app = create_app(db_path, clock=clock, business_tz="America/New_York", release_interval=0)
+    with TestClient(app) as c:
         yield c
