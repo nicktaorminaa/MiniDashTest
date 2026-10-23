@@ -1,7 +1,7 @@
 """Order placement, lookup and status updates."""
 
 import sqlite3
-from datetime import UTC, datetime
+from datetime import datetime
 
 from minidash.errors import DomainError, NotFoundError
 from minidash.repositories import orders as orders_repo
@@ -9,7 +9,7 @@ from minidash.repositories import restaurants as restaurants_repo
 from minidash.schemas import OrderIn, OrderStatus
 
 
-def place_order(conn: sqlite3.Connection, order: OrderIn) -> dict:
+def place_order(conn: sqlite3.Connection, order: OrderIn, now: datetime) -> dict:
     if restaurants_repo.get_restaurant(conn, order.restaurant_id) is None:
         raise NotFoundError(
             "RESTAURANT_NOT_FOUND", f"Restaurant {order.restaurant_id} does not exist"
@@ -34,7 +34,7 @@ def place_order(conn: sqlite3.Connection, order: OrderIn) -> dict:
             status=OrderStatus.PLACED.value,
             total_cents=total,
             address=order.address,
-            created_at=datetime.now(UTC).isoformat(),
+            created_at=now.isoformat(),
             items=lines,
         )
     return get_order(conn, order_id)

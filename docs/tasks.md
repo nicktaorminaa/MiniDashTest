@@ -5,7 +5,7 @@ pass, the full suite still passes, and the whole diff has been read for anything
 
 | # | Slice | Criteria | Verified by | Status |
 |---|---|---|---|---|
-| S1 | **Inject a clock.** `Clock` protocol, `SystemClock`, `ManualClock`; `create_app(clock=...)`; `created_at` comes from the clock. | AC-14 | `tests/test_clock.py`: `ManualClock` set/advance; `created_at` equals the injected time; naive datetimes rejected by `ManualClock`. | Planned |
+| S1 | **Inject a clock.** `Clock` protocol, `SystemClock`, `ManualClock`; `create_app(clock=...)`; `created_at` comes from the clock. | AC-14 | `tests/test_clock.py`: `ManualClock` set/advance; `created_at` equals the injected time; naive datetimes rejected by `ManualClock`. | Done |
 | S2 | **Schema and timestamps.** Three nullable columns, index, idempotent migration of a baseline database, fixed-width UTC formatter; `GET /orders/{id}` returns the new fields. | AC-15 | `tests/test_schema.py`: migrating a baseline-shaped DB keeps rows and adds columns; running twice is a no-op; formatted strings sort in time order across offsets. | Planned |
 | S3 | **Lead-time and horizon rule.** Pure `validate_schedule(scheduled_for, now)`. | AC-3, AC-4, AC-5 | `tests/test_schedule_rules.py`: 44:59 / 45:00 / 46:00 minutes; 7 days exactly / +1 µs; naive datetime; non-UTC offset normalised; `release_at` is 30 min earlier. | Planned |
 | S4 | **Opening-hours rule.** Pure `kitchen_open_for_window(...)` with overnight hours, 24-hour restaurants, inclusive ends, DST. | AC-6 | `tests/test_opening_hours.py`: same-day hours, window crossing opening/closing, overnight before/after midnight, all-day, fall-back DST night. | Planned |
