@@ -85,18 +85,6 @@ function hhmmToMinutes(value) {
   return h * 60 + m;
 }
 
-/** Opening hours as minute-of-day ranges, splitting hours that cross midnight. */
-export function openIntervals(opensAt, closesAt) {
-  const open = hhmmToMinutes(opensAt);
-  const close = hhmmToMinutes(closesAt);
-  if (open === close) return [[0, 1440]];
-  if (open < close) return [[open, close]];
-  return [
-    [0, close],
-    [open, 1440],
-  ];
-}
-
 /** Same rule as the server's kitchen_open_for_window: [start, end] inside one opening interval. */
 export function kitchenOpen(restaurant, startMs, endMs, timeZone) {
   const opens = hhmmToMinutes(restaurant.opens_at);
@@ -182,34 +170,71 @@ export function suggestedDelivery(nowMs, rules, timeZone) {
   return { date: zonedDate(slot, timeZone), time: zonedTime(slot, timeZone) };
 }
 
-/**
- * Shapes for the day timeline, as fractions (0..1) of one business-zone calendar day.
- * Days with a daylight-saving change are 23 or 25 hours long; positions use real time.
- */
-export function timeline({ dateStr, timeZone, restaurant, nowMs, rules, deliveryMs }) {
-  const dayStart = wallTimeToEpoch(dateStr, "00:00", timeZone);
-  const dayEnd = wallTimeToEpoch(addDays(dateStr, 1), "00:00", timeZone);
-  const span = dayEnd - dayStart;
-  const clamp = (x) => Math.min(1, Math.max(0, x));
-  const pos = (epoch) => clamp((epoch - dayStart) / span);
-  const atMinute = (minute) =>
-    minute >= 1440
-      ? dayEnd
-      : wallTimeToEpoch(
-          dateStr,
-          `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`,
-          timeZone,
-        );
+/** Every opening interval, as [openMs, closeMs], that touches the days around an instant. */
+function openSpans(restaurant, aroundMs, timeZone) {
+  if (restaurant.opens_at === restaurant.closes_at) return [[-Infinity, Infinity]];
+  const opens = hhmmToMinutes(restaurant.opens_at);
+  const closes = hhmmToMinutes(restaurant.closes_at);
+  const day = zonedDate(aroundMs, timeZone);
+  return [-2, -1, 0, 1].map((n) => {
+    const openDay = addDays(day, n);
+    const closeDay = closes > opens ? openDay : addDays(openDay, 1);
+    return [
+      wallTimeToEpoch(openDay, restaurant.opens_at, timeZone),
+      wallTimeToEpoch(closeDay, restaurant.closes_at, timeZone),
+    ];
+  });
+}
 
-  const open = openIntervals(restaurant.opens_at, restaurant.closes_at).map(([a, b]) => ({
-    from: pos(atMinute(a)),
-    to: pos(atMinute(b)),
-  }));
-  const tooSoonUntil = pos(nowMs + rules.min_lead_minutes * MINUTE);
-  const result = { open, tooSoonUntil, kitchen: null, delivery: null };
-  if (deliveryMs != null && deliveryMs >= dayStart && deliveryMs <= dayEnd) {
+/**
+ * Shapes for the timeline around a delivery time, as fractions (0..1) of the window
+ * [centerMs - hoursEachSide, centerMs + hoursEachSide]. Zoomed in so the kitchen window is
+ * easy to see. Positions use real time, so a daylight-saving night shows the repeated hour.
+ */
+export function timeline({ centerMs, hoursEachSide = 3, timeZone, restaurant, nowMs, rules, deliveryMs }) {
+  const fromMs = centerMs - hoursEachSide * HOUR;
+  const toMs = centerMs + hoursEachSide * HOUR;
+  const pos = (epoch) => Math.min(1, Math.max(0, (epoch - fromMs) / (toMs - fromMs)));
+
+  const open = openSpans(restaurant, centerMs, timeZone)
+    .filter(([a, b]) => b > fromMs && a < toMs)
+    .map(([a, b]) => ({ from: pos(a), to: pos(b) }));
+
+  // Ticks on whole local hours. Every real offset is a multiple of 15 minutes.
+  const ticks = [];
+  const label = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric" });
+  for (let t = Math.ceil(fromMs / (15 * MINUTE)) * 15 * MINUTE; t <= toMs; t += 15 * MINUTE) {
+    if (zonedParts(t, timeZone).minute === 0) ticks.push({ at: pos(t), label: label.format(new Date(t)) });
+  }
+
+  const result = {
+    open,
+    ticks,
+    tooSoonUntil: pos(nowMs + rules.min_lead_minutes * MINUTE),
+    kitchen: null,
+    delivery: null,
+  };
+  if (deliveryMs != null) {
     result.delivery = pos(deliveryMs);
-    result.kitchen = { from: pos(deliveryMs - rules.release_before_minutes * MINUTE), to: pos(deliveryMs) };
+    result.kitchen = { from: pos(deliveryMs - rules.release_before_minutes * MINUTE), to: result.delivery };
   }
   return result;
+}
+
+/** "18:00" -> "6:00 PM" (a clock reading, not an instant). */
+export function formatClock(hhmm) {
+  const [h, m] = hhmm.split(":").map(Number);
+  const suffix = h < 12 ? "AM" : "PM";
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${hour12}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
+export function formatHours(opensAt, closesAt) {
+  if (opensAt === closesAt) return "Open 24 hours";
+  return `${formatClock(opensAt)} – ${formatClock(closesAt)}`;
+}
+
+/** "America/New_York" -> "New York". */
+export function cityName(timeZone) {
+  return timeZone.split("/").pop().replaceAll("_", " ");
 }

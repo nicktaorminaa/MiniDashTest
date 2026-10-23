@@ -21,6 +21,16 @@ version is the one installed. Versions are pinned in `requirements*.txt`.
 | httpx2 | 2.16.0 | HTTP client required by FastAPI's `TestClient` | https://pypi.org/project/httpx2/ — github.com/pydantic/httpx2, author Tom Christie, 22 releases. See note. |
 | ruff | 0.17.2 | Linter and formatter | https://pypi.org/project/ruff/ — docs.astral.sh/ruff, Astral Software |
 
+## Optional test dependency (customer page)
+
+| Package | Version | Why | Registry check |
+|---|---|---|---|
+| playwright | 1.63.0 | Drives headless Chromium for `tests/test_web_browser.py`. Listed in `requirements-browser.txt`, not in `requirements-dev.txt`, because it needs a ~150 MB browser download; without it those tests are skipped. | https://pypi.org/project/playwright/ — Microsoft Corporation, 87 releases; pinned below the latest (1.64.1) to match the Chromium build used for verification. Pulls in `greenlet` and `pyee`. |
+
+The page itself adds no package: it is plain HTML, CSS and JavaScript served by FastAPI's own
+`StaticFiles`, and its JavaScript tests use Node's built-in test runner (`node --test`), which needs
+no npm packages.
+
 ## Transitive packages worth noting
 
 | Package | Pulled in by | Check |

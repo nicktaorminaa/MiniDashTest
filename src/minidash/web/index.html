@@ -4,8 +4,80 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MiniDash</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script type="module" src="/static/app.js"></script>
 </head>
 <body>
-  <p>MiniDash is starting. The ordering page arrives in the next slice.</p>
+  <header class="masthead">
+    <p class="wordmark">MiniDash</p>
+    <p class="tagline">Order now, or pick a delivery time up to a week ahead.</p>
+  </header>
+
+  <main class="layout">
+    <section class="restaurants" aria-labelledby="restaurants-heading">
+      <h2 id="restaurants-heading">Restaurants</h2>
+      <ul id="restaurant-list" class="restaurant-list"></ul>
+    </section>
+
+    <section class="menu" aria-labelledby="menu-heading">
+      <h2 id="menu-heading">Menu</h2>
+      <p id="menu-empty" class="quiet">Choose a restaurant to see its menu.</p>
+      <ul id="menu-list" class="menu-list"></ul>
+    </section>
+
+    <div class="side">
+      <section class="order-panel" aria-labelledby="order-heading">
+        <h2 id="order-heading">Your order</h2>
+        <p id="cart-empty" class="quiet">Add dishes from a menu.</p>
+        <ul id="cart" class="cart"></ul>
+        <p id="cart-total" class="cart-total" hidden></p>
+
+        <label class="field">
+          <span>Delivery address</span>
+          <input id="address" type="text" autocomplete="street-address" maxlength="300"
+                 placeholder="Street, apartment, city">
+        </label>
+
+        <fieldset class="when">
+          <legend>Delivery</legend>
+          <label class="choice"><input type="radio" name="when" value="now" checked> As soon as possible</label>
+          <label class="choice"><input type="radio" name="when" value="later"> Schedule for later</label>
+        </fieldset>
+
+        <div id="schedule-fields" class="schedule" hidden>
+          <div class="pickers">
+            <label class="field">
+              <span>Date</span>
+              <input id="schedule-date" type="date">
+            </label>
+            <label class="field">
+              <span>Time</span>
+              <input id="schedule-time" type="time" step="900">
+            </label>
+          </div>
+          <p id="zone-note" class="quiet small"></p>
+          <div id="timeline" class="timeline" role="img"></div>
+          <ul class="legend" aria-hidden="true">
+            <li><span class="swatch swatch-open"></span>Open</li>
+            <li><span class="swatch swatch-closed"></span>Closed</li>
+            <li><span class="swatch swatch-kitchen"></span>Kitchen has your order</li>
+            <li><span class="swatch swatch-soon"></span>Too soon</li>
+          </ul>
+          <p id="hint" class="hint" aria-live="polite"></p>
+        </div>
+
+        <button id="place" class="primary" type="button">Place order</button>
+        <p id="form-error" class="error" role="alert"></p>
+      </section>
+
+      <section class="tracker" aria-labelledby="tracker-heading">
+        <h2 id="tracker-heading">Your orders</h2>
+        <p id="tracker-empty" class="quiet">Orders you place here appear in this list.</p>
+        <ol id="orders" class="orders"></ol>
+      </section>
+    </div>
+  </main>
+
+  <noscript>This page needs JavaScript. The API is still available at /docs.</noscript>
 </body>
 </html>

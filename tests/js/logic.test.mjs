@@ -5,10 +5,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  cityName,
   errorMessage,
+  formatClock,
+  formatHours,
   formatMoney,
   kitchenOpen,
-  openIntervals,
   scheduleHint,
   statusInfo,
   suggestedDelivery,
@@ -53,12 +55,6 @@ test("a time that is skipped (14 Mar 2027, clocks go forward) lands after the ga
 
 test("the same rule in a zone east of UTC (Berlin fall-back, 25 Oct 2026)", () => {
   assert.equal(wallTimeToEpoch("2026-10-25", "02:30", "Europe/Berlin"), Date.UTC(2026, 9, 25, 0, 30));
-});
-
-test("openIntervals splits hours that cross midnight", () => {
-  assert.deepEqual(openIntervals("11:00", "22:00"), [[660, 1320]]);
-  assert.deepEqual(openIntervals("18:00", "02:00"), [[0, 120], [1080, 1440]]);
-  assert.deepEqual(openIntervals("00:00", "00:00"), [[0, 1440]]);
 });
 
 test("lead-time boundaries match the server: 44:59 no, 45:00 yes", () => {
@@ -108,43 +104,47 @@ test("suggested delivery is a quarter hour at least an hour away", () => {
   assert.deepEqual(suggestedDelivery(NOW + 1 * MIN, RULES, NY), { date: "2026-10-23", time: "15:15" });
 });
 
-test("timeline positions are fractions of the business day", () => {
-  const t = timeline({
-    dateStr: "2026-10-23",
-    timeZone: NY,
-    restaurant: PASTA,
-    nowMs: NOW,
-    rules: RULES,
-    deliveryMs: ny("2026-10-23", "18:00"),
-  });
-  assert.deepEqual(t.open, [{ from: 11 / 24, to: 22 / 24 }]);
-  assert.equal(t.tooSoonUntil, 14.75 / 24);
-  assert.equal(t.delivery, 18 / 24);
-  assert.deepEqual(t.kitchen, { from: 17.5 / 24, to: 18 / 24 });
+test("opening hours and city wording", () => {
+  assert.equal(formatClock("00:00"), "12:00 AM");
+  assert.equal(formatClock("12:30"), "12:30 PM");
+  assert.equal(formatClock("18:00"), "6:00 PM");
+  assert.equal(formatHours("18:00", "02:00"), "6:00 PM – 2:00 AM");
+  assert.equal(formatHours("00:00", "00:00"), "Open 24 hours");
+  assert.equal(cityName("America/New_York"), "New York");
 });
 
-test("timeline on the 25-hour fall-back day uses real time", () => {
-  const t = timeline({
-    dateStr: "2026-11-01",
-    timeZone: NY,
-    restaurant: ALL_DAY,
-    nowMs: NOW,
-    rules: RULES,
-    deliveryMs: ny("2026-11-01", "12:00"),
-  });
-  assert.equal(t.delivery, 13 / 25); // noon is 13 real hours after midnight that day
-  assert.equal(t.tooSoonUntil, 0); // "now" is before this day
+test("timeline zooms to six hours around the delivery", () => {
+  const delivery = ny("2026-10-23", "18:00");
+  const t = timeline({ centerMs: delivery, timeZone: NY, restaurant: PASTA, nowMs: NOW, rules: RULES, deliveryMs: delivery });
+  assert.deepEqual(t.open, [{ from: 0, to: 1 }]); // 15:00-21:00 is all inside 11:00-22:00
+  assert.equal(t.delivery, 0.5);
+  assert.deepEqual(t.kitchen, { from: 2.5 / 6, to: 0.5 });
+  assert.equal(t.tooSoonUntil, 0); // 14:45 is before the window starts
+  assert.deepEqual(t.ticks.map((x) => x.label), ["3 PM", "4 PM", "5 PM", "6 PM", "7 PM", "8 PM", "9 PM"]);
+  assert.equal(t.ticks[1].at, 1 / 6);
 });
 
-test("timeline has no kitchen window when the delivery is on another day", () => {
-  const t = timeline({
-    dateStr: "2026-10-24",
-    timeZone: NY,
-    restaurant: PASTA,
-    nowMs: NOW,
-    rules: RULES,
-    deliveryMs: ny("2026-10-23", "18:00"),
-  });
+test("timeline shows an opening edge and the too-soon zone inside the window", () => {
+  // Late Night Noodles opens 18:00. Delivery 18:30, so the window is 15:30-21:30.
+  const delivery = ny("2026-10-23", "18:30");
+  const now = ny("2026-10-23", "17:00"); // too soon until 17:45
+  const t = timeline({ centerMs: delivery, timeZone: NY, restaurant: NOODLES, nowMs: now, rules: RULES, deliveryMs: delivery });
+  assert.deepEqual(t.open, [{ from: 2.5 / 6, to: 1 }]);
+  assert.equal(t.tooSoonUntil, 2.25 / 6);
+  assert.deepEqual(t.kitchen, { from: 2.5 / 6, to: 0.5 });
+});
+
+test("timeline window that ends exactly at opening shows no open time", () => {
+  const delivery = ny("2026-10-23", "15:00"); // window 12:00-18:00, opens at 18:00
+  const t = timeline({ centerMs: delivery, timeZone: NY, restaurant: NOODLES, nowMs: NOW, rules: RULES, deliveryMs: delivery });
+  assert.deepEqual(t.open, []);
+});
+
+test("timeline on the fall-back night shows 1 AM twice, an hour apart", () => {
+  const center = ny("2026-11-01", "01:30"); // 05:30 UTC
+  const t = timeline({ centerMs: center, timeZone: NY, restaurant: ALL_DAY, nowMs: NOW, rules: RULES, deliveryMs: null });
+  assert.deepEqual(t.ticks.map((x) => x.label), ["11 PM", "12 AM", "1 AM", "1 AM", "2 AM", "3 AM"]);
+  assert.deepEqual(t.open, [{ from: 0, to: 1 }]);
   assert.equal(t.kitchen, null);
   assert.equal(t.delivery, null);
 });

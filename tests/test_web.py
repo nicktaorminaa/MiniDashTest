@@ -6,7 +6,7 @@ from pathlib import Path
 
 from minidash.routes.web import WEB_DIR
 
-APP_JS = (WEB_DIR / "app.js").read_text() if (WEB_DIR / "app.js").exists() else ""
+APP_JS = (WEB_DIR / "app.js").read_text()
 
 
 def test_index_is_served_at_root(client):
@@ -53,16 +53,16 @@ def test_web_routes_stay_out_of_the_api_docs(client):
 def test_every_api_path_the_page_calls_exists(client):
     """Contract check: the paths in app.js must match real routes, so a renamed endpoint
     breaks a test instead of silently breaking the page."""
-    if not APP_JS:
-        return  # app.js arrives in S12
     called = set(re.findall(r'api\(\s*[`"](/[^`"]*)[`"]', APP_JS))
     assert called, "expected app.js to call the API through api(...)"
-    routes = [r.path for r in client.app.routes]
-    patterns = [re.compile("^" + re.sub(r"\{[^}]+\}", "[^/]+", p) + "$") for p in routes]
+    documented = client.get("/openapi.json").json()["paths"]
+    patterns = [re.compile("^" + re.sub(r"\{[^}]+\}", "[^/]+", p) + "$") for p in documented]
     for path in called:
         concrete = re.sub(r"\$\{[^}]+\}", "1", path)
         assert any(p.match(concrete) for p in patterns), f"app.js calls unknown path {path}"
 
 
 def test_page_files_exist_in_the_package():
-    assert {"index.html", "logic.js"} <= {p.name for p in Path(WEB_DIR).iterdir()}
+    assert {"index.html", "styles.css", "app.js", "logic.js"} <= {
+        p.name for p in Path(WEB_DIR).iterdir()
+    }

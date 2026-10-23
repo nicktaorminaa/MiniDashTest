@@ -224,9 +224,24 @@ MUTANTS = [
         [("for (const day of [addDays(startDay, -1), startDay])", "for (const day of [startDay])")],
     ),
     (
-        "page: timeline assumes 24-hour days",
+        "page: timeline ticks miss local hours",
         "web/logic.js",
-        [("const span = dayEnd - dayStart;", "const span = 24 * HOUR;")],
+        [("t <= toMs; t += 15 * MINUTE)", "t <= toMs; t += HOUR)")],
+    ),
+    (
+        "page: timeline shows zero-width open spans",
+        "web/logic.js",
+        [
+            (
+                ".filter(([a, b]) => b > fromMs && a < toMs)",
+                ".filter(([a, b]) => b >= fromMs && a <= toMs)",
+            )
+        ],
+    ),
+    (
+        "page: empty cart shows a total",
+        "web/styles.css",
+        [("[hidden] { display: none !important; }", "")],
     ),
     (
         "config: lead time hard-coded",

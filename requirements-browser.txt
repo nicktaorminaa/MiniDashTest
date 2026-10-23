@@ -1,0 +1,4 @@
+-r requirements-dev.txt
+# Optional: real-browser tests in tests/test_web_browser.py.
+# After installing, run: playwright install chromium
+playwright==1.63.0
