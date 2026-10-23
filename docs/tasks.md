@@ -14,7 +14,7 @@ pass, the full suite still passes, and the whole diff has been read for anything
 | S7 | **Release worker.** Lifespan background loop with error logging, and `python -m minidash.worker --once`. | AC-7, AC-10, AC-14 | `tests/test_worker.py`: loop releases an order after `ManualClock.advance`; a failing run is logged and the loop continues; CLI releases overdue orders. | Done |
 | S8 | **Cancel before release.** `POST /orders/{id}/cancel` with a guarded `UPDATE`. | AC-11, AC-12 | `tests/test_cancel.py`: cancel then release → never placed; release then cancel → 409, unchanged; cancel twice → 409; immediate order → 409; unknown id → 404. | Done |
 | S9 | **Guard the status endpoint.** PATCH cannot change a `SCHEDULED` order or set `SCHEDULED`. | AC-13 | `tests/test_status_guard.py`: PATCH on scheduled → 409 and still scheduled (release still happens later); PATCH to `SCHEDULED` → 422; released orders can be PATCHed normally. | Done |
-| S10 | **Demo and docs.** In-process demo script with a manual clock, README run/test/demo instructions, dependency audit. | — | `scripts/demo_scheduled_orders.py` runs to completion; README commands run from a fresh clone. | Planned |
+| S10 | **Demo and docs.** In-process demo script with a manual clock, README run/test/demo instructions, dependency audit. | — | `scripts/demo_scheduled_orders.py` runs to completion; README commands run from a fresh clone. | Done |
 
 ## Mutation checks
 
